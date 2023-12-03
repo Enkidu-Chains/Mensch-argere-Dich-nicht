@@ -208,7 +208,6 @@ class Dice:
 		return self._min_roll_value
 
 
-# todo redo a bit
 class Game:
 	_players: list[Player]
 	_board: Board
@@ -458,21 +457,24 @@ class GameService:
 		self._position_service = PositionService()
 		self._board_renderer = BoardRenderer()
 
+	def create_game(self, board_size: int, number_of_players: int) -> Game:
+		sides: list[Side] = [Side.Top, Side.Bottom, Side.Right, Side.Left]
+		dice: Dice = Dice(6, 1)
+		number_of_pieces_per_player: int = (board_size - 3) // 2
+		players: list[Player] =\
+			[Player([Piece() for _ in range(number_of_pieces_per_player)], sides[i]) for i in range(number_of_players)]
+		return Game(board_size, players, dice)
+
 	def run(self, game: Game):
 		while True:
-			self._board_renderer.render_board(
-				game.board, 
-				game.players
-			)
+			self._board_renderer.render_board(game.board, game.players)
 			
 			for player in game.players:
 				if self._did_player_win(player):
 					return
 
 				self._player_service.play(player, game.dice)
-
 				self._attack(game, player)
-
 				self._put_pieces_in_the_house(game, player)
 
 	def _attack(self, game: Game, attacker: Player):
@@ -515,14 +517,11 @@ class GameService:
 
 
 if __name__ == '__main__':
-	players5: list[Player] = [
-		Player([Piece() for _ in range(5)], Side.Top),
-		Player([Piece() for _ in range(5)], Side.Right),
-		Player([Piece() for _ in range(5)], Side.Bottom),
-		Player([Piece() for _ in range(5)], Side.Left)
-	]
-	dice5: Dice = Dice(6, 1)
+	board_size: int = int(input('Type a board size (should be an odd number bigger than or equal to 5):\n'))
+	number_of_players: int = int(input('Type a number of players (from 2 to 4):\n'))
 
-	game5: Game = Game(13, players5, dice5)
-	GameService().run(game5)
+	game_service: GameService = GameService()
+	game: Game = game_service.create_game(board_size, number_of_players)
+	game_service.run(game)
+
 	pass
