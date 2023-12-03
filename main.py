@@ -252,13 +252,6 @@ class Game:
 		return True
 
 
-#  Infrastructure
-
-
-class ApplicationStateStorage:
-	pass
-
-
 #  Application
 
 
