@@ -3,6 +3,9 @@ from enum import IntEnum
 from typing import Generator
 
 
+# The code implements all parts of the project, and a bit more.
+
+
 #  Additional stuff
 
 
@@ -75,7 +78,7 @@ class PieceState(IntEnum):
 
 class Piece:
 	_state: PieceState
-	_distance: int | None
+	_distance: int | None  # distance from the start.
 
 	def __init__(self):
 		self._state = PieceState.InBase
@@ -128,8 +131,6 @@ class Player:
 	def _set_side(self, side: Side):
 		self._side = side
 
-	pass
-
 
 class Board:
 	_size: int
@@ -147,10 +148,11 @@ class Board:
 
 	@property
 	def k(self) -> int:  # I haven't made up a better name due to the lack of proficiency.
+		# But that calculation happens quiet a bit, so I decided to make it a separate property.
 		return self.half_size - 1
 
 	@property
-	def max_one_quarter_dist(self):
+	def one_side_length(self):
 		return self.size - 1
 
 	@property
@@ -171,7 +173,7 @@ class Board:
 
 	@property
 	def track_length(self) -> int:
-		return 4 * (self.size - 1)
+		return 4 * self.one_side_length
 
 	def _set_size(self, size: int):
 		if size % 2 == 0 or size < 5:
@@ -233,7 +235,7 @@ class Game:
 		if 2 > len(players) or 4 < len(players):
 			raise value_error('The number of players should be from 2 to 4.')
 		if not self._are_players_unique_entities(players):
-			raise value_error('Players should be unique entities.')
+			raise value_error('Players should be unique entities and they should be on different sides.')
 		self._players = players
 
 	@property
@@ -246,7 +248,7 @@ class Game:
 	def _are_players_unique_entities(self, players: list[Player]) -> bool:
 		for i in range(len(players)):
 			for j in range(i + 1, len(players)):
-				if players[i] is players[j]:
+				if players[i] is players[j] or players[i].side == players[j].side:
 					return False
 
 		return True
@@ -265,8 +267,8 @@ class PositionService:
 		if piece.state != PieceState.InPlay:
 			raise value_error('Piece must be in play to get it\'s position.')
 
-		rotation_coefficient: int = piece.distance // board.max_one_quarter_dist + side.value
-		direction: Vector2D = self._get_direction_from_distance(board, piece.distance % board.max_one_quarter_dist)
+		rotation_coefficient: int = piece.distance // board.one_side_length + side.value
+		direction: Vector2D = self._get_direction_from_distance(board, piece.distance % board.one_side_length)
 		position: Vector2D = board.start_position + direction
 
 		for _ in range(rotation_coefficient):
@@ -298,8 +300,6 @@ class PositionService:
 
 	def _rotate_90_counter_clockwise(self, vector: Vector2D) -> Vector2D:
 		return Vector2D(-vector.y, vector.x)
-
-	pass
 
 
 class BoardRenderer:
@@ -386,8 +386,6 @@ class PieceService:
 			piece.move(distance)
 		except BaseException as ex:
 			print(ex)
-
-	pass
 
 
 class PlayerService:
@@ -516,5 +514,3 @@ if __name__ == '__main__':
 	game_service: GameService = GameService()
 	game: Game = game_service.create_game(board_size, number_of_players)
 	game_service.run(game)
-
-	pass
