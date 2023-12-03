@@ -3,7 +3,7 @@ from enum import IntEnum
 from typing import Generator
 
 
-# The code implements all parts of the project, and a bit more.
+# The code implements all parts of the project, and a bit more. (Python version 3.11)
 
 
 #  Additional stuff
