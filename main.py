@@ -34,25 +34,30 @@ def exception(note: str) -> Exception:
 #  Domain
 
 
-class Dice:
-	@staticmethod
-	def roll():
-		return random.randrange(1, 7, 1)
-
-
 class Vector2D:
-	x: int
-	y: int
+	_x: int
+	_y: int
 
 	def __init__(self, x: int, y: int):
-		self.x = x
-		self.y = y
+		self._x = x
+		self._y = y
+
+	@property
+	def x(self) -> int:
+		return self._x
+
+	@property
+	def y(self) -> int:
+		return self._y
 
 	def __add__(self, other: 'Vector2D') -> 'Vector2D':
 		return Vector2D(self.x + other.x, self.y + other.y)
 
-	def __mul__(self, other: int) -> 'Vector2D':
-		return Vector2D(self.x * other, self.y * other)
+	def __mul__(self, scalar: int) -> 'Vector2D':
+		return Vector2D(self.x * scalar, self.y * scalar)
+
+	def __eq__(self, other: 'Vector2D') -> bool:
+		return self.x == other.x and self.y == other.y
 
 
 class Side(IntEnum):
@@ -63,9 +68,9 @@ class Side(IntEnum):
 
 
 class PieceState(IntEnum):
-	OutOfTheGame = 0
-	InTheGame = 1
-	InTheHouse = 2
+	InBase = 0
+	InPlay = 1
+	InHouse = 2
 
 
 class Piece:
@@ -73,47 +78,39 @@ class Piece:
 	_distance: int | None
 
 	def __init__(self):
-		self._state = PieceState.OutOfTheGame
+		self._state = PieceState.InBase
 		self._distance = None
 
-	def get_state(self) -> PieceState:
+	@property
+	def state(self) -> PieceState:
 		return self._state
 
-	def get_distance(self) -> int | None:
+	@property
+	def distance(self) -> int | None:
 		return self._distance
 
 	def change_state(self, new_state: PieceState):
-		self._state, self._distance = (new_state, 0) if new_state is PieceState.InTheGame else (new_state, None)
+		self._state, self._distance = (new_state, 0) if new_state is PieceState.InPlay else (new_state, None)
 
 	def move(self, distance: int):
-		if self._state is not PieceState.InTheGame:
-			raise exception('Piece may not be moved if it is not in the game.')
-		if 0 >= distance or distance > 6:
-			raise value_error('Distance to move may not be less or equal to 0 or greater than 6.')\
+		if self._state is not PieceState.InPlay:
+			raise exception('Piece may not be moved if it is not in play.')
+		if 0 >= distance:
+			raise value_error('Distance to move may not be less or equal to 0')
 
 		self._distance += distance
 
 
 class Player:
-	_nickname: str
 	_pieces: list[Piece]
 	_side: Side
 
-	def __init__(self, nickname: str, pieces: list[Piece], side: Side):
-		self._set_nickname(nickname)
+	def __init__(self, pieces: list[Piece], side: Side):
 		self._set_pieces(pieces)
 		self._set_side(side)
 
-	def get_nickname(self) -> str:
-		return self._nickname
-
-	def _set_nickname(self, nickname: str):
-		if is_null_or_empty(nickname):
-			raise value_error('Nickname can\'t be empty.')
-
-		self._nickname = nickname
-
-	def get_pieces(self) -> list[Piece]:
+	@property
+	def pieces(self) -> list[Piece]:
 		return self._pieces
 
 	def _set_pieces(self, pieces: list[Piece]):
@@ -124,50 +121,14 @@ class Player:
 
 		self._pieces = pieces
 
-	def get_side(self) -> Side:
+	@property
+	def side(self) -> Side:
 		return self._side
 
 	def _set_side(self, side: Side):
 		self._side = side
 
 	pass
-
-
-# todo redo a bit
-class Game:
-	_board_size: int
-	_players: list[Player]
-
-	def __init__(self, board_size: int, players: list[Player]):
-		self._set_board_size(board_size)
-		self._set_players(players)
-
-	def get_board_size(self) -> int:
-		return self._board_size
-
-	def _set_board_size(self, size: int):
-		if size % 2 == 0 or size < 5:
-			raise value_error('Size should be an odd number and grater than or equal to 5.')
-
-		self._size = size
-
-	def get_players(self) -> list[Player]:
-		return self._players
-
-	def _set_players(self, players: list[Player]):
-		if 2 < len(players) <= 4:
-			raise value_error('The number of players should be from 2 to 4.')
-		if not self.are_players_unique_entities(players):
-			raise value_error('Players should be unique entities.')
-
-	@staticmethod
-	def are_players_unique_entities(players: list[Player]) -> bool:
-		for i in range(len(players)):
-			for j in range(i + 1, len(players)):
-				if players[i] is players[j]:
-					return False
-
-		return True
 
 
 class Board:
@@ -208,6 +169,10 @@ class Board:
 	def middle_range(self) -> range:
 		return range(self.half_size - 1, self.half_size + 2)
 
+	@property
+	def track_length(self) -> int:
+		return 4 * (self.size - 1)
+
 	def _set_size(self, size: int):
 		if size % 2 == 0 or size < 5:
 			raise value_error('Size should be an odd number and grater than or equal to 5.')
@@ -224,13 +189,92 @@ class Board:
 		return (x == self.half_size or y == self.half_size) and x not in [0, self.size - 1] and y not in [0, self.size - 1]
 
 
+class Dice:
+	_max_roll_value: int
+	_min_roll_value: int
+
+	def __init__(self, max_roll: int, min_roll: int):
+		if max_roll < min_roll:
+			raise value_error('Max roll value can\'t be smaller than min roll value.')
+		self._max_roll_value = max_roll
+		self._min_roll_value = min_roll
+
+	@property
+	def get_max_roll_value(self) -> int:
+		return self._max_roll_value
+
+	@property
+	def get_min_roll_value(self) -> int:
+		return self._min_roll_value
+
+
+# todo redo a bit
+class Game:
+	_players: list[Player]
+	_board: Board
+	_dice: Dice
+
+	def __init__(self, board_size: int, players: list[Player], dice: Dice):
+		self._set_players(players)
+		self._set_board(board_size)
+		self._set_dice(dice)
+
+	@property
+	def board(self) -> Board:
+		return self._board
+
+	def _set_board(self, board_size: int):
+		self._board = Board(board_size)
+
+	@property
+	def players(self) -> list[Player]:
+		return self._players
+
+	def _set_players(self, players: list[Player]):
+		if 2 > len(players) or 4 < len(players):
+			raise value_error('The number of players should be from 2 to 4.')
+		if not self._are_players_unique_entities(players):
+			raise value_error('Players should be unique entities.')
+		self._players = players
+
+	@property
+	def dice(self) -> Dice:
+		return self._dice
+
+	def _set_dice(self, dice: Dice):
+		self._dice = dice
+
+	def _are_players_unique_entities(self, players: list[Player]) -> bool:
+		for i in range(len(players)):
+			for j in range(i + 1, len(players)):
+				if players[i] is players[j]:
+					return False
+
+		return True
+
+
+#  Infrastructure
+
+
+class ApplicationStateStorage:
+	pass
+
+
 #  Application
+
+
+class DiceService:
+	def roll(self, dice: Dice) -> int:
+		return random.randrange(dice.get_min_roll_value, dice.get_max_roll_value + 1)
 
 
 class PositionService:
 	def get_piece_position(self, board: Board, piece: Piece, side: Side) -> Vector2D:
-		rotation_coefficient: int = piece.get_distance() // board.max_one_quarter_dist + side.value
-		direction: Vector2D = self._get_direction_from_distance(board, piece.get_distance() % board.max_one_quarter_dist)
+		if piece.state != PieceState.InPlay:
+			raise value_error('Piece must be in play to get it\'s position.')
+
+		rotation_coefficient: int = piece.distance // board.max_one_quarter_dist + side.value
+		direction: Vector2D = self._get_direction_from_distance(board, piece.distance % board.max_one_quarter_dist)
 		position: Vector2D = board.start_position + direction
 
 		for _ in range(rotation_coefficient):
@@ -251,8 +295,7 @@ class PositionService:
 
 		return position + board.position_shift
 
-	@staticmethod
-	def _get_direction_from_distance(board: Board, distance: int):
+	def _get_direction_from_distance(self, board: Board, distance: int):
 		if distance >= (2 * board.k):
 			return Vector2D(board.k, board.k + distance % board.k)
 
@@ -261,8 +304,7 @@ class PositionService:
 
 		return Vector2D(0, distance % board.half_size)
 
-	@staticmethod
-	def _rotate_90_counter_clockwise(vector: Vector2D) -> Vector2D:
+	def _rotate_90_counter_clockwise(self, vector: Vector2D) -> Vector2D:
 		return Vector2D(-vector.y, vector.x)
 
 	pass
@@ -287,34 +329,33 @@ class BoardRenderer:
 
 	def _get_renderable_pieces(self, board: Board, players: list[Player]) -> Generator[tuple[Vector2D, str], None, None]:
 		for player in players:
-			char: str = self._board_side_to_piece_char(player.get_side())
+			char: str = self._board_side_to_piece_char(player.side)
 
-			for piece in player.get_pieces():
-				if piece.get_state() is PieceState.InTheGame:
-					position: Vector2D = self._position_service.get_piece_position(board, piece, player.get_side())
+			for piece in player.pieces:
+				if piece.state is PieceState.InPlay:
+					position: Vector2D = self._position_service.get_piece_position(board, piece, player.side)
 					yield position, char
 
-				if piece.get_state() is PieceState.InTheHouse:
+				if piece.state is PieceState.InHouse:
 					position: Vector2D = self._position_service.get_piece_position_in_house(
 						board,
-						player.get_side(),
-						house_number=player.get_pieces().index(piece) + 1)
+						player.side,
+						house_number=player.pieces.index(piece) + 1)
 					yield position, char
 
-	@staticmethod
-	def _print_board_matrix(board_matrix: list[list[str]]):
+	def _print_board_matrix(self, board_matrix: list[list[str]]):
+		print(end='\n')
 		for row in board_matrix:
 			for element in row:
-				print(element, end='')
+				print(element, end=' ')
 			print(end='\n')
+		print(end='\n')
 
-	@staticmethod
-	def _put_pieces_onto_board(pieces: list[tuple[Vector2D, str]], board_matrix: list[list[str]]):
+	def _put_pieces_onto_board(self, pieces: list[tuple[Vector2D, str]], board_matrix: list[list[str]]):
 		for position, char in pieces:
 			board_matrix[position.y][position.x] = char
 
-	@staticmethod
-	def _get_board_element_on(board: Board, x: int, y: int) -> str:
+	def _get_board_element_on(self, board: Board, x: int, y: int) -> str:
 		if board.is_it_empty_cell(x, y):
 			return ' '
 		if board.is_it_center(x, y):
@@ -324,22 +365,7 @@ class BoardRenderer:
 
 		return '*'
 
-	@staticmethod
-	def _get_colour_of_char(side: Side) -> str:
-		match side:
-			case Side.Top:
-				return 'red'
-			case Side.Right:
-				return 'yellow'
-			case Side.Bottom:
-				return 'blue'
-			case side.Left:
-				return 'green'
-			case _:
-				raise exception('There is no such side.')
-
-	@staticmethod
-	def _board_side_to_piece_char(side: Side) -> str:
+	def _board_side_to_piece_char(self, side: Side) -> str:
 		match side:
 			case Side.Top:
 				return 'A'
@@ -354,33 +380,149 @@ class BoardRenderer:
 
 
 class PieceService:
+	def put_in_the_base(self, piece: Piece):
+		piece.change_state(PieceState.InBase)
+
+	def put_in_the_play(self, piece: Piece):
+		piece.change_state(PieceState.InPlay)
+
+	def put_in_the_house(self, piece: Piece):
+		piece.change_state(PieceState.InHouse)
+
+	def move_by(self, piece: Piece, distance: int):
+		try:
+			piece.move(distance)
+		except BaseException as ex:
+			print(ex)
+
 	pass
 
 
 class PlayerService:
-	pass
+	_dice_service: DiceService
+	_piece_service: PieceService
+
+	def __init__(self):
+		self._dice_service = DiceService()
+		self._piece_service = PieceService()
+
+	def play(self, player: Player, dice: Dice):
+		for i in range(3):
+			dice_number: int = self._dice_service.roll(dice)
+
+			if dice_number != dice.get_max_roll_value:
+				self._try_to_move_piece_by(self._chose_piece(player), dice_number)
+				return
+
+			move_or_put_piece: int = random.randrange(2)
+
+			if move_or_put_piece == 0 and not self._try_to_put_piece_in_the_play(player):
+				self._try_to_move_piece_by(self._chose_piece(player), dice_number)
+			if move_or_put_piece == 1 and not self._try_to_move_piece_by(self._chose_piece(player), dice_number):
+				self._try_to_put_piece_in_the_play(player)
+
+	def _try_to_put_piece_in_the_play(self, player: Player) -> bool:
+		for piece in player.pieces:
+			if piece.state == PieceState.InBase:
+				self._piece_service.put_in_the_play(piece)
+				return True
+
+		return False
+
+	def _try_to_move_piece_by(self, piece: Piece | None, distance: int) -> bool:
+		if piece is None:
+			return False
+
+		self._piece_service.move_by(piece, distance)
+		return True
+
+	def _chose_piece(self, player: Player) -> Piece | None:
+		pieces_in_play: list = [piece for piece in player.pieces if piece.state == PieceState.InPlay]
+		if len(pieces_in_play) == 0:
+			return None
+
+		index: int = random.randrange(0, len(pieces_in_play))
+
+		return pieces_in_play[index]
 
 
 class GameService:
-	pass
+	_board_renderer: BoardRenderer
+	_piece_service: PieceService
+	_player_service: PlayerService
+	_position_service: PositionService
+
+	def __init__(self):
+		self._piece_service = PieceService()
+		self._player_service = PlayerService()
+		self._position_service = PositionService()
+		self._board_renderer = BoardRenderer()
+
+	def run(self, game: Game):
+		while True:
+			self._board_renderer.render_board(
+				game.board, 
+				game.players
+			)
+			
+			for player in game.players:
+				if self._did_player_win(player):
+					return
+
+				self._player_service.play(player, game.dice)
+
+				self._attack(game, player)
+
+				self._put_pieces_in_the_house(game, player)
+
+	def _attack(self, game: Game, attacker: Player):
+		for piece_attacker in attacker.pieces:
+			if piece_attacker.state != PieceState.InPlay:
+				continue
+
+			position1: Vector2D = self._position_service.get_piece_position(
+				game.board, piece_attacker, attacker.side
+			)
+			for attacked in game.players:
+				if attacked is attacker:
+					continue
+
+				for attacked_piece in attacked.pieces:
+					if attacked_piece.state != PieceState.InPlay:
+						continue
+
+					position2: Vector2D = self._position_service.get_piece_position(
+						game.board, attacked_piece, attacked.side
+					)
+
+					if position1 == position2:
+						self._piece_service.put_in_the_base(attacked_piece)
+
+	def _put_pieces_in_the_house(self, game: Game, player: Player):
+		for piece in player.pieces:
+			if piece.state == PieceState.InPlay and piece.distance > game.board.track_length:
+				self._piece_service.put_in_the_house(piece)
+
+	def _did_player_win(self, player: Player):
+		for piece in player.pieces:
+			if piece.state != PieceState.InHouse:
+				return False
+		
+		return True
 
 
 #  Run script
 
 
 if __name__ == '__main__':
-	players: list[Player] = [
-		Player('hello', [Piece(), Piece(), Piece(), Piece(), Piece()], Side.Top),
-		Player('hello2', [Piece(), Piece(), Piece(), Piece(), Piece()], Side.Bottom),
-		Player('hello3', [Piece(), Piece(), Piece(), Piece(), Piece()], Side.Right)
+	players5: list[Player] = [
+		Player([Piece() for _ in range(5)], Side.Top),
+		Player([Piece() for _ in range(5)], Side.Right),
+		Player([Piece() for _ in range(5)], Side.Bottom),
+		Player([Piece() for _ in range(5)], Side.Left)
 	]
-	for i in range(5):
-		for player in players:
-			state: PieceState = PieceState(random.randrange(0, 3, step=1))
+	dice5: Dice = Dice(6, 1)
 
-			player.get_pieces()[i].change_state(state)
-
-			if player.get_pieces()[i].get_state() is PieceState.InTheGame:
-				player.get_pieces()[i].move(Dice().roll())
-
-	BoardRenderer().render_board(Board(13), players)
+	game5: Game = Game(13, players5, dice5)
+	GameService().run(game5)
+	pass
