@@ -399,35 +399,23 @@ class PlayerService:
 	def play(self, player: Player, dice: Dice):
 		for i in range(3):
 			dice_number: int = self._dice_service.roll(dice)
+			move_or_put_piece: int = random.randrange(2)
+			piece_in_play: Piece | None = self._chose_piece_with_state(player, PieceState.InPlay)
+			piece_in_base: Piece | None = self._chose_piece_with_state(player, PieceState.InBase)
 
-			if dice_number != dice.get_max_roll_value:
-				self._try_to_move_piece_by(self._chose_piece(player), dice_number)
+			if dice_number != dice.get_max_roll_value and piece_in_play is not None:
+				self._piece_service.move_by(piece_in_play, dice_number)
+			elif dice_number != dice.get_max_roll_value and piece_in_play is None:
 				return
 
-			move_or_put_piece: int = random.randrange(2)
+			if (move_or_put_piece == 0 and piece_in_play is not None) or (move_or_put_piece == 1 and piece_in_base is None):
+				self._piece_service.move_by(piece_in_play, dice_number)
 
-			if move_or_put_piece == 0 and not self._try_to_put_piece_in_the_play(player):
-				self._try_to_move_piece_by(self._chose_piece(player), dice_number)
-			if move_or_put_piece == 1 and not self._try_to_move_piece_by(self._chose_piece(player), dice_number):
-				self._try_to_put_piece_in_the_play(player)
+			if (move_or_put_piece == 0 and piece_in_play is None) or (move_or_put_piece == 1 and piece_in_base is not None):
+				self._piece_service.put_in_the_play(piece_in_base)
 
-	def _try_to_put_piece_in_the_play(self, player: Player) -> bool:
-		for piece in player.pieces:
-			if piece.state == PieceState.InBase:
-				self._piece_service.put_in_the_play(piece)
-				return True
-
-		return False
-
-	def _try_to_move_piece_by(self, piece: Piece | None, distance: int) -> bool:
-		if piece is None:
-			return False
-
-		self._piece_service.move_by(piece, distance)
-		return True
-
-	def _chose_piece(self, player: Player) -> Piece | None:
-		pieces_in_play: list = [piece for piece in player.pieces if piece.state == PieceState.InPlay]
+	def _chose_piece_with_state(self, player: Player, state: PieceState) -> Piece | None:
+		pieces_in_play: list = [piece for piece in player.pieces if piece.state == state]
 		if len(pieces_in_play) == 0:
 			return None
 
