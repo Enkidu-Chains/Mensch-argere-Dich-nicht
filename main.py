@@ -405,6 +405,7 @@ class PlayerService:
 
 			if dice_number != dice.get_max_roll_value and piece_in_play is not None:
 				self._piece_service.move_by(piece_in_play, dice_number)
+				return
 			elif dice_number != dice.get_max_roll_value and piece_in_play is None:
 				return
 
@@ -440,14 +441,13 @@ class GameService:
 		sides: list[Side] = [Side.Top, Side.Bottom, Side.Right, Side.Left]
 		dice: Dice = Dice(6, 1)
 		number_of_pieces_per_player: int = (board_size - 3) // 2
-		players: list[Player] =\
-			[Player([Piece() for _ in range(number_of_pieces_per_player)], sides[i]) for i in range(number_of_players)]
+		players: list[Player] = [Player([Piece() for _ in range(number_of_pieces_per_player)], sides[i]) for i in range(number_of_players)]
 		return Game(board_size, players, dice)
 
 	def run(self, game: Game):
 		while True:
 			self._board_renderer.render_board(game.board, game.players)
-			
+
 			for player in game.players:
 				if self._did_player_win(player):
 					return
@@ -461,9 +461,8 @@ class GameService:
 			if piece_attacker.state != PieceState.InPlay:
 				continue
 
-			position1: Vector2D = self._position_service.get_piece_position(
-				game.board, piece_attacker, attacker.side
-			)
+			position1: Vector2D = self._position_service.get_piece_position(game.board, piece_attacker, attacker.side)
+
 			for attacked in game.players:
 				if attacked is attacker:
 					continue
@@ -472,9 +471,7 @@ class GameService:
 					if attacked_piece.state != PieceState.InPlay:
 						continue
 
-					position2: Vector2D = self._position_service.get_piece_position(
-						game.board, attacked_piece, attacked.side
-					)
+					position2: Vector2D = self._position_service.get_piece_position(game.board, attacked_piece, attacked.side)
 
 					if position1 == position2:
 						self._piece_service.put_in_the_base(attacked_piece)
@@ -488,7 +485,7 @@ class GameService:
 		for piece in player.pieces:
 			if piece.state != PieceState.InHouse:
 				return False
-		
+
 		return True
 
 
