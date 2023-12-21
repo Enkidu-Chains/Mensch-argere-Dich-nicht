@@ -2,9 +2,7 @@ import random
 from enum import IntEnum
 from typing import Generator
 
-
 # The code implements all parts of the project, and a bit more. (Python version 3.11)
-
 
 #  Additional stuff
 
@@ -321,7 +319,7 @@ class BoardRenderer:
 
 	def _get_renderable_pieces(self, board: Board, players: list[Player]) -> Generator[tuple[Vector2D, str], None, None]:
 		for player in players:
-			char: str = self._board_side_to_piece_char(player.side)
+			char: str = self.board_side_to_piece_char(player.side)
 
 			for piece in player.pieces:
 				if piece.state is PieceState.InPlay:
@@ -357,7 +355,7 @@ class BoardRenderer:
 
 		return '*'
 
-	def _board_side_to_piece_char(self, side: Side) -> str:
+	def board_side_to_piece_char(self, side: Side) -> str:
 		match side:
 			case Side.Top:
 				return 'A'
@@ -391,10 +389,12 @@ class PieceService:
 class PlayerService:
 	_dice_service: DiceService
 	_piece_service: PieceService
+	_board_render: BoardRenderer
 
 	def __init__(self):
 		self._dice_service = DiceService()
 		self._piece_service = PieceService()
+		self._board_render = BoardRenderer()
 
 	def play(self, player: Player, dice: Dice):
 		for i in range(3):
@@ -403,17 +403,23 @@ class PlayerService:
 			piece_in_play: Piece | None = self._chose_piece_with_state(player, PieceState.InPlay)
 			piece_in_base: Piece | None = self._chose_piece_with_state(player, PieceState.InBase)
 
+			print(f"The number on the dice for player {self._board_render.board_side_to_piece_char(player.side)}: {dice_number}", end=" ")
+
 			if dice_number != dice.get_max_roll_value and piece_in_play is not None:
 				self._piece_service.move_by(piece_in_play, dice_number)
+				print("- move", end="\n")
 				return
 			elif dice_number != dice.get_max_roll_value and piece_in_play is None:
+				print("- no piece to move", end="\n")
 				return
 
 			if (move_or_put_piece == 0 and piece_in_play is not None) or (move_or_put_piece == 1 and piece_in_base is None):
 				self._piece_service.move_by(piece_in_play, dice_number)
+				print("- move", end="\n")
 
 			if (move_or_put_piece == 0 and piece_in_play is None) or (move_or_put_piece == 1 and piece_in_base is not None):
 				self._piece_service.put_in_the_play(piece_in_base)
+				print("- put a piece on the board", end="\n")
 
 	def _chose_piece_with_state(self, player: Player, state: PieceState) -> Piece | None:
 		pieces_in_play: list = [piece for piece in player.pieces if piece.state == state]
@@ -475,6 +481,7 @@ class GameService:
 
 					if position1 == position2:
 						self._piece_service.put_in_the_base(attacked_piece)
+						print(f"Player {self._board_renderer.board_side_to_piece_char(attacker.side)} attacked player {self._board_renderer.board_side_to_piece_char(attacked.side)}", end="\n")
 
 	def _put_pieces_in_the_house(self, game: Game, player: Player):
 		for piece in player.pieces:
