@@ -1,17 +1,20 @@
 import random
-from enum import IntEnum
+from enum import IntEnum, Enum
 from typing import Generator
 
 # The code implements all parts of the project, and a bit more. (Python version 3.11)
 
+# All the exception cases were made for debugging purposes.
+
 #  Additional stuff
 
 
-def is_null_or_empty(string: str) -> bool:
-	return string.strip() == '' or string.strip() is None
-
-
 def contains_duplicates(l: list) -> bool:
+	"""
+	Checks the list on duplicates.
+	:param l: A list to check
+	:return: True if the list contains duplicates, otherwise False.
+	"""
 	for i in range(len(l)):
 		for j in range(i + 1, len(l)):
 			if l[i] is l[j] or l[i] == l[j]:
@@ -21,12 +24,22 @@ def contains_duplicates(l: list) -> bool:
 
 
 def value_error(note: str) -> ValueError:
+	"""
+	Makes a value error with the note string.
+	:param note: A note to add to an error.
+	:return: A ValueError with the note.
+	"""
 	error: ValueError = ValueError()
 	error.add_note(note)
 	return error
 
 
 def exception(note: str) -> Exception:
+	"""
+	Makes a general exception with the note.
+	:param note: A note to add to an exception.
+	:return: An Exception with the note.
+	"""
 	ex: Exception = Exception()
 	ex.add_note(note)
 	return ex
@@ -40,6 +53,10 @@ class Vector2D:
 	_y: int
 
 	def __init__(self, x: int, y: int):
+		"""
+		:param x: x coordinate.
+		:param y: y coordinate.
+		"""
 		self._x = x
 		self._y = y
 
@@ -52,12 +69,27 @@ class Vector2D:
 		return self._y
 
 	def __add__(self, other: 'Vector2D') -> 'Vector2D':
+		"""
+		Adds two vectors.
+		:param other: A vector to add.
+		:return: A new vector that is the result of adding two vectors.
+		"""
 		return Vector2D(self.x + other.x, self.y + other.y)
 
 	def __mul__(self, scalar: int) -> 'Vector2D':
+		"""
+		Multiplies a vector by the scalar.
+		:param scalar: A scalar to multiply a vector by.
+		:return: A new vector with scaled coordinates.
+		"""
 		return Vector2D(self.x * scalar, self.y * scalar)
 
 	def __eq__(self, other: 'Vector2D') -> bool:
+		"""
+		Checks whether two vectors are equal.
+		:param other: Another vector
+		:return: True if two vectors have the same coordinates, otherwise False.
+		"""
 		return self.x == other.x and self.y == other.y
 
 
@@ -91,9 +123,17 @@ class Piece:
 		return self._distance
 
 	def change_state(self, new_state: PieceState):
+		"""
+		Sets a state of a piece to a new state, also changes the distance property based on new state.
+		:param new_state: A new states to set a piece to.
+		"""
 		self._state, self._distance = (new_state, 0) if new_state is PieceState.InPlay else (new_state, None)
 
 	def move(self, distance: int):
+		"""
+		Increases the distance from the start. The piece should be in play.
+		:param distance: A distance to increase. Should be bigger than 0.
+		"""
 		if self._state is not PieceState.InPlay:
 			raise exception('Piece may not be moved if it is not in play.')
 		if 0 >= distance:
@@ -107,6 +147,10 @@ class Player:
 	_side: Side
 
 	def __init__(self, pieces: list[Piece], side: Side):
+		"""
+		:param pieces: A set of piece the new player has.
+		:param side: A side of the new player.
+		"""
 		self._set_pieces(pieces)
 		self._set_side(side)
 
@@ -145,8 +189,8 @@ class Board:
 		return self.size // 2
 
 	@property
-	def k(self) -> int:  # I haven't made up a better name due to the lack of proficiency.
-		# But that calculation happens quiet a bit, so I decided to make it a separate property.
+	def k(self) -> int:  # I haven't made up a better name.
+		# But that calculation happens quiet a bit (7 times), so I decided to make it a separate property.
 		return self.half_size - 1
 
 	@property
@@ -180,12 +224,30 @@ class Board:
 		self._size = size
 
 	def is_it_empty_cell(self, x: int, y: int):
+		"""
+		Checks if the cell with the coordinates x, y is an empty cell.
+		:param x: x coordinates.
+		:param y: y coordinates.
+		:return: True if the cell is empty, otherwise False.
+		"""
 		return x not in self.middle_range and y not in self.middle_range
 
 	def is_it_center(self, x: int, y: int):
+		"""
+		Checks if the cell is the center of the board.
+		:param x: x coordinates.
+		:param y: y coordinates.
+		:return: True if the cell is the center, otherwise False.
+		"""
 		return x == y == self.half_size
 
 	def is_it_house(self, x: int, y: int):
+		"""
+		Checks if the cell is a house.
+		:param x: x coordinates.
+		:param y: y coordinates.
+		:return: True if the cell is a house, otherwise False.
+		"""
 		return (x == self.half_size or y == self.half_size) and x not in [0, self.size - 1] and y not in [0, self.size - 1]
 
 
@@ -194,6 +256,10 @@ class Dice:
 	_min_roll_value: int
 
 	def __init__(self, max_roll: int, min_roll: int):
+		"""
+		:param max_roll: The maximal number on the dice.
+		:param min_roll: The minimal number on the dice.
+		"""
 		if max_roll < min_roll:
 			raise value_error('Max roll value can\'t be smaller than min roll value.')
 		self._max_roll_value = max_roll
@@ -214,6 +280,11 @@ class Game:
 	_dice: Dice
 
 	def __init__(self, board_size: int, players: list[Player], dice: Dice):
+		"""
+		:param board_size: A size of the board.
+		:param players: A list of players.
+		:param dice: Dice.
+		"""
 		self._set_players(players)
 		self._set_board(board_size)
 		self._set_dice(dice)
@@ -257,11 +328,23 @@ class Game:
 
 class DiceService:
 	def roll(self, dice: Dice) -> int:
+		"""
+		Rolls the dice.
+		:param dice: Dice to roll.
+		:return: A random number on the dice. (from min roll to max roll including)
+		"""
 		return random.randrange(dice.get_min_roll_value, dice.get_max_roll_value + 1)
 
 
 class PositionService:
 	def get_piece_position(self, board: Board, piece: Piece, side: Side) -> Vector2D:
+		"""
+		Gets piece position on the board.
+		:param board: A board
+		:param piece: A piece
+		:param side: The side of the piece (stores in player)
+		:return: A vector with its coordinates on the board.
+		"""
 		if piece.state != PieceState.InPlay:
 			raise value_error('Piece must be in play to get it\'s position.')
 
@@ -275,6 +358,13 @@ class PositionService:
 		return position + board.position_shift
 
 	def get_piece_position_in_house(self, board: Board, side: Side, house_number: int):
+		"""
+		Gets a piece position in a house.
+		:param board: A board.
+		:param side: The side of the piece. (Stores in player)
+		:param house_number: A house number. (Preferably the index of a piece)
+		:return: A vector with its coordinates in the house.
+		"""
 		if house_number >= board.half_size or house_number < 1:
 			raise value_error(
 				f'The house number must be between 0 and {board.half_size} excluded. (0, {board.half_size})')
@@ -307,6 +397,11 @@ class BoardRenderer:
 		self._position_service = PositionService()
 
 	def render_board(self, board: Board, players: list[Player]):
+		"""
+		Prints the board with the pieces of the players.
+		:param board: A board to print.
+		:param players: Players to print on the board.
+		"""
 		board_matrix: list[list[str]] = list(self._default_board(board))
 		pieces: list[tuple[Vector2D, str]] = list(self._get_renderable_pieces(board, players))
 		self._put_pieces_onto_board(pieces, board_matrix)
@@ -371,19 +466,33 @@ class BoardRenderer:
 
 class PieceService:
 	def put_in_the_base(self, piece: Piece):
+		"""
+		Puts the piece in the base by changing its state to InBase.
+		:param piece: A piece to put in the base.
+		"""
 		piece.change_state(PieceState.InBase)
 
 	def put_in_the_play(self, piece: Piece):
+		"""
+		Puts the piece in play by changing its state to InPlay.
+		:param piece: A piece to put in play.
+		"""
 		piece.change_state(PieceState.InPlay)
 
 	def put_in_the_house(self, piece: Piece):
+		"""
+		Puts the piece in a house by changing its state to InHouse.
+		:param piece: A piece to put in a house.
+		"""
 		piece.change_state(PieceState.InHouse)
 
 	def move_by(self, piece: Piece, distance: int):
-		try:
-			piece.move(distance)
-		except BaseException as ex:
-			print(ex)
+		"""
+		Moves the piece by the distance.
+		:param piece: A piece to move.
+		:param distance: A distance to move the piece by.
+		"""
+		piece.move(distance)
 
 
 class PlayerService:
@@ -397,6 +506,11 @@ class PlayerService:
 		self._board_render = BoardRenderer()
 
 	def play(self, player: Player, dice: Dice):
+		"""
+		A turn of the player.
+		:param player: A player which a turn is.
+		:param dice: Dice to roll by the player.
+		"""
 		for i in range(3):
 			dice_number: int = self._dice_service.roll(dice)
 			move_or_put_piece: int = random.randrange(2)
@@ -444,6 +558,12 @@ class GameService:
 		self._board_renderer = BoardRenderer()
 
 	def create_game(self, board_size: int, number_of_players: int) -> Game:
+		"""
+		Creates a game with the particular size of the board.
+		:param board_size: A number of how long is on side of the board should be. (Only odd values bigger than 3)
+		:param number_of_players: A number of players to play.
+		:return: A game.
+		"""
 		sides: list[Side] = [Side.Top, Side.Bottom, Side.Right, Side.Left]
 		dice: Dice = Dice(6, 1)
 		number_of_pieces_per_player: int = (board_size - 3) // 2
@@ -451,11 +571,16 @@ class GameService:
 		return Game(board_size, players, dice)
 
 	def run(self, game: Game):
+		"""
+		Runs the game simulation.
+		:param game: A game to run a simulation for.
+		"""
 		while True:
 			self._board_renderer.render_board(game.board, game.players)
 
 			for player in game.players:
 				if self._did_player_win(player):
+					print(f"Player {self._board_renderer.board_side_to_piece_char(player.side)} won!!!", end="\n")
 					return
 
 				self._player_service.play(player, game.dice)
